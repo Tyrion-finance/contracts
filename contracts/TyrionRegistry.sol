@@ -6,20 +6,21 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 struct Advertiser {
     uint256 id;
     address wallet;
     uint256 balance;
-    address referrer;
+    uint256 referrer;
 }
 
 struct Publisher {
     uint256 id;
     address wallet;
     uint256 balance;
-    address referrer;
+    uint256 referrer;
 }
 
 struct Referrer {
@@ -29,6 +30,8 @@ struct Referrer {
 }
 
 contract TyrionRegistry is Ownable {
+    using SafeMath for uint256;
+
     mapping(uint256 => Advertiser) public advertisers;
     mapping(uint256 => Publisher) public publishers;
     mapping(uint256 => Referrer) public referrers;
@@ -37,36 +40,36 @@ contract TyrionRegistry is Ownable {
     uint256 public nextPublisherId = 1;
     uint256 public nextReferrerId = 1;
 
-    event RegisteredAdvertiser(uint256 indexed advertiserId, address indexed referrer);
-    event RegisteredPublisher(uint256 indexed publisherId, address indexed referrer);
+    event RegisteredAdvertiser(uint256 indexed advertiserId, uint256 indexed referrer);
+    event RegisteredPublisher(uint256 indexed publisherId, uint256 indexed referrer);
     event RegisteredReferrer(uint256 indexed referrerId);
 
     constructor() {
     }
 
-    function registerAdvertiser(address advertiserWallet, address referrerAddress) external returns (uint256 advertiserId) {
+    function registerAdvertiser(address advertiserWallet, uint256 referrerId) external returns (uint256 advertiserId) {
         advertiserId = nextAdvertiserId;
         advertisers[advertiserId] = Advertiser({
             id: advertiserId,
             wallet: advertiserWallet,
             balance: 0,
-            referrer: referrerAddress
+            referrer: referrerId
         });
 
-        emit RegisteredAdvertiser(advertiserId, referrerAddress);
+        emit RegisteredAdvertiser(advertiserId, referrerId);
         nextAdvertiserId++;
     }
 
-    function registerPublisher(address publisherWallet, address referrerAddress) external returns (uint256 publisherId) {
+    function registerPublisher(address publisherWallet, uint256 referrerId) external returns (uint256 publisherId) {
         publisherId = nextPublisherId;
         publishers[publisherId] = Publisher({
             id: publisherId,
             wallet: publisherWallet,
             balance: 0,
-            referrer: referrerAddress
+            referrer: referrerId
         });
 
-        emit RegisteredPublisher(publisherId, referrerAddress);
+        emit RegisteredPublisher(publisherId, referrerId);
 
         nextPublisherId++;
     }
@@ -81,6 +84,26 @@ contract TyrionRegistry is Ownable {
 
         emit RegisteredReferrer(nextReferrerId);
         nextReferrerId++;
+    }
+
+    function modifyPublisherBalance(uint256 publisherId, int256 delta) external onlyOwner {
+        if (delta > 0) {
+            publishers[publisherId].balance += uint256(delta);
+        } else if (delta < 0) {
+            publishers[publisherId].balance -= uint256(-delta);
+        }
+    }
+
+    function modifyAdvertiserBalance(uint256 advertiserId, int256 delta) external onlyOwner {
+        if (delta > 0) {
+            advertisers[advertiserId].balance += uint256(delta);
+        } else if (delta < 0) {
+            publishers[publisherId].balance -= uint256(-delta);
+        }
+    }
+
+    function modifyReferrerBalance(uint256 referrerId, int256 delta) external onlyOwner {
+        referrers[referrerId].balance += delta;
     }
 
     function getAdvertiserById(uint256 _advertiserId) external view returns (Advertiser memory) {

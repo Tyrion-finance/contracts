@@ -19,7 +19,7 @@ contract TyrionBroker is Ownable {
     uint256 public advertiserPercentage = 700;
     uint256 public burnPercentage = 20;
     uint256 public referrerDepositPercentage = 25;
-    uint256 public reservesPercentage = 25;
+    uint256 public publisherReferrerPercentage = 25;
     uint256 public percentDivisor = 1000;
 
     address public treasuryWallet;
@@ -30,64 +30,71 @@ contract TyrionBroker is Ownable {
     event WithdrawnPublisher(uint256 indexed publisherId, uint256 amount);
     event WithdrawnReferrer(uint256 indexed referrerId, uint256 amount);
 
-    constructor(address _treasuryWallet, address _tyrionTokenAddress) {
+    constructor(address _treasuryWallet, address _tyrionTokenAddress, address _registryAddress) {
         treasuryWallet = _treasuryWallet;
         tyrionToken = ITYRION(_tyrionTokenAddress);
-
+        registry = TyrionRegistry(_registryAddress);
     }
 
     function depositTokens(uint256 advertiserId, uint256 amount) external {
-        Advertiser storage advertiser = advertisers[advertiserId];
-        require(tyrionToken.transferFrom(advertiser.wallet, address(this), amount), "Transfer failed");
+        require(tyrionToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         uint256 advertiserAmount = (amount * advertiserPercentage) / percentDivisor;
         uint256 burnAmount = (amount * burnPercentage) / percentDivisor;
         uint256 referrerAmount = (amount * referrerDepositPercentage) / percentDivisor;
-        uint256 reservesAmount = (amount * reservesPercentage) / percentDivisor;
+        // Reserves to be spent on referrer who referred the publisher who will display ads later on
+        uint256 reservesAmount = (advertiserAmount * publisherReferrerPercentage) / percentDivisor;
         uint256 treasuryAmount = amount - advertiserAmount - burnAmount - referrerAmount - reservesAmount;
 
         tyrionToken.burn(burnAmount);
         tyrionToken.transfer(treasuryWallet, treasuryAmount);
 
-        uint256 referrerId = referrers[advertiser.referrer].id;
-        referrers[referrerId].balance += referrerAmount;
+        Advertiser storage advertiser = registry.getAdvertiserById(advertiserId);
+        if (advertiser.referrer != 0) {
+            registry.modifyReferrerBalance(advertiser.referrer, int256(referrerAmount));
+        }
 
-        advertiser.balance += advertiserAmount;
+        registry.modifyAdvertiserBalance(advertiserId, int256(advertiserAmount));
 
         emit Deposited(advertiserId, amount);
     }
 
     // This function can be called from the server-side to credit publishers
-    function creditPublisher(uint256 publisherId, uint256 amount) external onlyOwner {
+    function creditPublisher(uint256 advertiserId, uint256 publisherId, uint256 amount) external onlyOwner {
         // Ensure the server's address is authorized
-        require(amount <= advertisers[publisherId].balance, "Insufficient balance in advertiser account");
+        Advertiser memory advertiser = registry.getAdvertiserById(advertiserId);
+        Publisher memory publisher = registry.getPublisherById(publisherId);
 
-        publishers[publisherId].balance += amount;
-        advertisers[publisherId].balance -= amount;
+        require(amount <= advertiser.balance, "Insufficient balance in advertiser account");
+
+        registry.modifyAdvertiserBalance(advertiserId, -int256(amount));
+        registry.modifyPublisherBalance(publisherId, int256(amount));
     }
 
     function publisherWithdraw(uint256 publisherId, uint256 amount) external {
-        require(publishers[publisherId].wallet == msg.sender, "Unauthorized");
-        require(publishers[publisherId].balance >= amount, "Insufficient balance");
+        Publisher memory publisher = registry.getPublisherById(publisherId);
+        require(publisher.wallet == msg.sender, "Unauthorized");
+        require(publisher.balance >= amount, "Insufficient balance");
 
-        uint256 referrerAmount = (amount * 2.5) / 100;
-        publishers[publisherId].balance -= amount;
+        registry.modifyPublisherBalance(publisherId, -int256(amount));
 
-        tyrionToken.transfer(publishers[publisherId].wallet, amount - referrerAmount);
+        tyrionToken.transfer(publisher.wallet, amount);
         // Assuming each referrer has a unique ID and is mapped to their ID
-        uint256 referrerId = referrers[publishers[publisherId].referrer].id;
-        referrers[referrerId].balance += referrerAmount;
+        if (publisher.referrer != 0) {
+            uint256 referrerAmount = (amount * publisherReferrerPercentage) / percentDivisor;
+            registry.modifyReferrerBalance(publisher.referrer, referrerAmount);
+        }
 
         emit WithdrawnPublisher(publisherId, amount);
     }
 
     function referrerWithdraw(uint256 referrerId) external {
-        Referrer storage referrer = referrers[referrerId];
+        Referrer memory referrer = registry.getReferrerById(referrerId);
         require(referrer.wallet == msg.sender, "Unauthorized");
         require(referrer.balance > 0, "No balance to withdraw");
 
         uint256 amount = referrer.balance;
-        referrer.balance = 0;
+        registry.modifyReferrerBalance(referrerId, -int256(amount));
 
         tyrionToken.transfer(referrer.wallet, amount);
 
@@ -102,11 +109,11 @@ contract TyrionBroker is Ownable {
         uint256 _advertiserPercentage,
         uint256 _burnPercentage,
         uint256 _referrerDepositPercentage,
-        uint256 _reservesPercentage
+        uint256 _publisherReferrerPercentage
     ) external onlyOwner {
         advertiserPercentage = _advertiserPercentage;
         burnPercentage = _burnPercentage;
         referrerDepositPercentage = _referrerDepositPercentage;
-        reservesPercentage = _reservesPercentage;
+        publisherReferrerPercentage = _publisherReferrerPercentage;
     }
 }
