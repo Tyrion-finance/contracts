@@ -17,6 +17,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
     struct VestingSchedule {
         uint256 id;
+        address owner;
         address beneficiary;
         address token;
         uint256 startTime;
@@ -26,7 +27,9 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         uint256 pausedAt;
     }
 
-    event VestingAdded(uint256 vestingId, address indexed beneficiary, address indexed token, uint256 startTime, uint256 duration, uint256 amount);
+    event VestingAdded(uint256 vestingId, address indexed owner, address indexed beneficiary, address indexed token, uint256 startTime, uint256 duration, uint256 amount);
+    event VestingPaused(uint256 vestingId, uint256 timestamp);
+    event VestingUnPaused(uint256 vestingId, uint256 timestamp);
     event Withdrawn(uint256 vestingId, address indexed beneficiary, uint256 amount);
 
     VestingSchedule[] private vestings;
@@ -45,7 +48,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         uint256 _startTime,
         uint256 _duration,
         uint256 _amount
-    ) external payable paysFeeOrExempted {
+    ) external payable paysFeeOrExempted returns (uint256 newVestingId) {
         require(_beneficiary != address(0), "Invalid beneficiary address");
         require(_token != address(0), "Invalid token address");
         require(_duration > 0 && _duration < 1000 weeks, "Duration should be > 0 and < 1000 weeks");
@@ -54,11 +57,12 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
 
+        newVestingId = vestingIdCounter.current();
         vestingIdCounter.increment();
-        uint256 newVestingId = vestingIdCounter.current();
 
         VestingSchedule memory newVesting = VestingSchedule({
             id: newVestingId,
+            owner: msg.sender,
             beneficiary: _beneficiary,
             token: _token,
             startTime: _startTime,
@@ -70,7 +74,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
         vestings.push(newVesting);
 
-        emit VestingAdded(newVestingId, _beneficiary, _token, _startTime, _duration, _amount);
+        emit VestingAdded(newVestingId, msg.sender, _beneficiary, _token, _startTime, _duration, _amount);
     }
 
     function withdraw(uint256 vestingId) external nonReentrant {
@@ -78,8 +82,32 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         VestingSchedule storage vesting = vestings[vestingId];
 
         require(msg.sender == vesting.beneficiary, "Not the beneficiary");
-        require(vesting.startTime <= block.timestamp, "Vesting hasn't started yet");
-        require(vesting.totalAmount > vesting.withdrawnAmount, "Nothing left to withdraw");
+
+        uint256 toWithdraw = withdrawableAmount(vestingId);
+
+        require(toWithdraw > 0, "No withdrawable amount at the moment");
+
+        vesting.withdrawnAmount += toWithdraw;
+
+        // Just a safeguard, should never happen
+        require(vesting.withdrawnAmount <= vesting.totalAmount, "Withdrawn amount exceeds total amount");
+
+        emit Withdrawn(vesting.id, msg.sender, toWithdraw);
+
+        IERC20(vesting.token).transfer(msg.sender, toWithdraw);
+    }
+
+    function withdrawableAmount(uint256 vestingId) public view returns (uint256) {
+        require(vestingId < vestings.length, "Invalid vesting ID");
+        VestingSchedule memory vesting = vestings[vestingId];
+
+        if (vesting.startTime > block.timestamp) {
+            return 0;
+        }
+
+        if (vesting.withdrawnAmount >= vesting.totalAmount) {
+            return 0;
+        }
 
         uint256 elapsed;
         if (vesting.pausedAt > 0) {
@@ -90,14 +118,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
         uint256 vestedAmount = (vesting.totalAmount * Math.min(elapsed, vesting.duration)) / vesting.duration;
 
-        require(vestedAmount > vesting.withdrawnAmount, "No vestable amount at the moment");
-
-        uint256 amountToWithdraw = vestedAmount - vesting.withdrawnAmount;
-        vesting.withdrawnAmount = vestedAmount;
-
-        emit Withdrawn(vesting.id, msg.sender, amountToWithdraw);
-
-        IERC20(vesting.token).transfer(msg.sender, amountToWithdraw);
+        return vestedAmount - vesting.withdrawnAmount;
     }
 
     function getVestingById(uint256 vestingId) external view returns (VestingSchedule memory) {
@@ -113,11 +134,24 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         isExempted[_address] = _exempt;
     }
 
-    function setVestingPause(uint256 vestingId, bool _isPaused) external onlyOwner {
+    function pauseVesting(uint256 vestingId, bool _isPaused) external {
         require(vestingId < vestings.length, "Invalid vesting ID");
-        if (_isPaused == true)
+        require(msg.sender == vestings[vestingId].owner, "Not the owner");
+
+        if (_isPaused == true) {
             vestings[vestingId].pausedAt = block.timestamp;
-        else
+            emit VestingPaused(vestingId, block.timestamp);
+        } else {
             vestings[vestingId].pausedAt = 0;
+            emit VestingUnPaused(vestingId, block.timestamp);
+        }
+    }
+
+    function changeVestingOwner(uint256 vestingId, address _newOwner) external {
+        require(vestingId < vestings.length, "Invalid vesting ID");
+        require(msg.sender == vestings[vestingId].owner, "Not the owner");
+        require(_newOwner != address(0), "Invalid address");
+
+        vestings[vestingId].owner = _newOwner;
     }
 }
