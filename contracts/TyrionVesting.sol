@@ -24,6 +24,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         uint256 duration;
         uint256 totalAmount;
         uint256 withdrawnAmount;
+        bool isPausable;
         uint256 pausedAt;
     }
 
@@ -47,7 +48,8 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         address _token,
         uint256 _startTime,
         uint256 _duration,
-        uint256 _amount
+        uint256 _amount,
+        bool _isPausable
     ) external payable paysFeeOrExempted returns (uint256 newVestingId) {
         require(_beneficiary != address(0), "Invalid beneficiary address");
         require(_token != address(0), "Invalid token address");
@@ -69,7 +71,8 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
             duration: _duration,
             totalAmount: _amount,
             withdrawnAmount: 0,
-            pausedAt: 0
+            pausedAt: 0,
+            isPausable: _isPausable
         });
 
         vestings.push(newVesting);
@@ -137,6 +140,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
     function pauseVesting(uint256 vestingId, bool _isPaused) external {
         require(vestingId < vestings.length, "Invalid vesting ID");
         require(msg.sender == vestings[vestingId].owner, "Not the owner");
+        require(vestings[vestingId].isPausable == true, "Vesting not pausable");
 
         if (_isPaused == true) {
             vestings[vestingId].pausedAt = block.timestamp;
@@ -153,5 +157,21 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         require(_newOwner != address(0), "Invalid address");
 
         vestings[vestingId].owner = _newOwner;
+    }
+
+    function transferVestingBeneficiary(uint256 vestingId, address _newBeneficiary) external {
+        require(vestingId < vestings.length, "Invalid vesting ID");
+        require(msg.sender == vestings[vestingId].beneficiary, "Not the beneficiary");
+        require(_newBeneficiary != address(0), "Invalid address");
+
+        vestings[vestingId].beneficiary = _newBeneficiary;
+    }
+
+    function extendVesting(uint256 vestingId, uint256 _newDuration) external {
+        require(vestingId < vestings.length, "Invalid vesting ID");
+        require(msg.sender == vestings[vestingId].beneficiary, "Not the beneficiary");
+        require(_newDuration > vestings[vestingId].duration, "Duration should be greater than previous");
+
+        vestings[vestingId].duration = _newDuration;
     }
 }
