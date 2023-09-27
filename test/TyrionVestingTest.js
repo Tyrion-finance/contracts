@@ -25,10 +25,6 @@ describe("TyrionVestingTest", function() {
         TyrionVesting = await ethers.getContractFactory("TyrionVesting");
         vesting = await TyrionVesting.deploy();
 
-        // console.log("deployed contracts", token, token2, vesting);
-        // console.log("deployed addresses", token.address, token2.address, vesting.address);
-        // console.log("deployed targets", token.target, token2.target, vesting.target);
-
         for (var tok of [token, token2]) {
             await tok.transfer(beneficiary1.address, parseEther("10000"));
             await tok.transfer(beneficiary2.address, parseEther("10000"));
@@ -40,28 +36,28 @@ describe("TyrionVestingTest", function() {
     it("should allow adding vesting with future start time by paying the correct fee", async () => {
         let futureTime = (await ethers.provider.getBlock()).timestamp + 10000;
         await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
-        await expect(vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, futureTime, 100000, parseEther("100"), { value: parseEther("1") }))
+        await expect(vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, futureTime, 100000, parseEther("100"), true, { value: parseEther("1") }))
             .to.emit(vesting, "VestingAdded");
     });
 
     it("should not allow adding vesting without the correct fee", async () => {
         let futureTime = (await ethers.provider.getBlock()).timestamp + 10000;
         await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
-        await expect(vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, futureTime, 100000, parseEther("100")))
+        await expect(vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, futureTime, 100000, parseEther("100"), true))
             .to.be.revertedWith("Fee not provided");
     });
 
     it("should allow adding vesting with past start time", async () => {
         let pastTime = (await ethers.provider.getBlock()).timestamp - 10000; // 10000 seconds in the past
         await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
-        await expect(vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, pastTime, 100000, parseEther("100"), { value: parseEther("1") }))
+        await expect(vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, pastTime, 100000, parseEther("100"), true, { value: parseEther("1") }))
             .to.emit(vesting, "VestingAdded");
     });
 
     it("should require the correct fee when non-exempted", async () => {
         let futureTime = (await ethers.provider.getBlock()).timestamp + 10000;
         await token.connect(nonExempted).approve(vesting.address, parseEther("100"));
-        await expect(vesting.connect(nonExempted).addVesting(nonExempted.address, token.address, futureTime, 100000, parseEther("100"), { value: parseEther("0.00001") }))
+        await expect(vesting.connect(nonExempted).addVesting(nonExempted.address, token.address, futureTime, 100000, parseEther("100"), true, { value: parseEther("0.00001") }))
             .to.be.revertedWith("Fee not provided");
     });
 
@@ -69,14 +65,14 @@ describe("TyrionVestingTest", function() {
         await vesting.setFeeExempted(beneficiary2.address, true);
         let futureTime = (await ethers.provider.getBlock()).timestamp + 10000;
         await token.connect(beneficiary2).approve(vesting.address, parseEther("100"));
-        await expect(vesting.connect(beneficiary2).addVesting(beneficiary2.address, token.address, futureTime, 100000, parseEther("100")))
+        await expect(vesting.connect(beneficiary2).addVesting(beneficiary2.address, token.address, futureTime, 100000, parseEther("100"), true))
             .to.emit(vesting, "VestingAdded");
     });
 
     it("should allow beneficiaries to withdraw according to vesting schedule", async () => {
         let startTime = (await ethers.provider.getBlock()).timestamp;
         await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
-        await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, 1000, parseEther("100"), { value: parseEther("1") });
+        await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, 1000, parseEther("100"), true, { value: parseEther("1") });
 
         let initialBalance = await token.balanceOf(beneficiary1.address);
 
@@ -102,7 +98,7 @@ describe("TyrionVestingTest", function() {
     it("should provide vesting info by vesting ID", async () => {
         let futureTime = (await ethers.provider.getBlock()).timestamp + 10000;
         await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
-        await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, futureTime, 100000, parseEther("100"), { value: parseEther("1") });
+        await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, futureTime, 100000, parseEther("100"), true, { value: parseEther("1") });
 
         let vestingInfo = await vesting.getVestingById(0);
         expect(vestingInfo.beneficiary).to.equal(beneficiary1.address);
@@ -116,11 +112,11 @@ describe("TyrionVestingTest", function() {
 
         let startTime = (await ethers.provider.getBlock()).timestamp;
 
-        await expect(vesting.addVesting(beneficiary1.address, token.address, startTime, 100000, ether("100"), { value: ether("1") }))
+        await expect(vesting.addVesting(beneficiary1.address, token.address, startTime, 100000, ether("100"), true, { value: ether("1") }))
             .to.emit(vesting, "VestingAdded")
             .withArgs(0, owner.address, beneficiary1.address, token.address, startTime, 100000, ether("100"));
 
-        await expect(vesting.addVesting(beneficiary1.address, token2.address, startTime + 100, 200000, ether("200"), { value: ether("1") }))
+        await expect(vesting.addVesting(beneficiary1.address, token2.address, startTime + 100, 200000, ether("200"), true, { value: ether("1") }))
             .to.emit(vesting, "VestingAdded")
             .withArgs(1, owner.address, beneficiary1.address, token2.address, startTime + 100, 200000, ether("200"));
     });
@@ -128,15 +124,13 @@ describe("TyrionVestingTest", function() {
     it("should allow UI to query amounts left to withdraw for a beneficiary", async () => {
         let startTime = (await ethers.provider.getBlock()).timestamp;
         await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
-        await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, 1000, parseEther("100"), { value: parseEther("1") });
+        await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, 1000, parseEther("100"), true, { value: parseEther("1") });
         let amountLeftToWithdrawOld = await vesting.withdrawableAmount(0);
-        console.log("amount left", amountLeftToWithdrawOld.toString());
 
         // After 25 seconds, 25% should have been vested
         await advanceTime(250);
 
         let amountLeftToWithdraw = await vesting.withdrawableAmount(0);
-        console.log("amount left", amountLeftToWithdraw.toString());
         almostEqual(amountLeftToWithdraw, parseEther("25"), 300);
         // expect(amountLeftToWithdraw.toString()).to.equal(parseEther("25").toString());
     });
@@ -147,7 +141,7 @@ describe("TyrionVestingTest", function() {
         for (ben of [beneficiary1, beneficiary2]) {
             for (tok of [token, token2]) {
                 await tok.connect(ben).approve(vesting.address, parseEther("100"));
-                await vesting.connect(ben).addVesting(ben.address, tok.address, timestamp, 100, parseEther("100"), {value: parseEther("1")});
+                await vesting.connect(ben).addVesting(ben.address, tok.address, timestamp, 100, parseEther("100"), true, {value: parseEther("1")});
             }
         }
 
@@ -169,9 +163,8 @@ describe("TyrionVestingTest", function() {
         let timestamp = (await ethers.provider.getBlock()).timestamp;
         for (var ben of [beneficiary1, beneficiary2]) {
             for (var tok of [token, token2]) {
-                console.log("depositing for", ben.address, tok.address);
                 await tok.connect(ben).approve(vesting.address, parseEther("100"));
-                await vesting.connect(ben).addVesting(ben.address, tok.address, timestamp, 100, parseEther("100"), {value: parseEther("0.5")});
+                await vesting.connect(ben).addVesting(ben.address, tok.address, timestamp, 100, parseEther("100"), true, {value: parseEther("0.5")});
             }
         }
 
@@ -190,13 +183,11 @@ describe("TyrionVestingTest", function() {
         const duration = 86400 * 30; // 30 days
         const startTime = (await ethers.provider.getBlock('latest')).timestamp;
 
-        console.log("vesting.address", vesting.address);
         // await token.transfer(vesting.address, amount);
         await token.approve(vesting.address, amount);
-        await vesting.addVesting(beneficiary1.address, token.address, startTime, duration, amount, { value: parseEther("0.5") });
+        await vesting.addVesting(beneficiary1.address, token.address, startTime, duration, amount, true, { value: parseEther("0.5") });
         const filter = vesting.filters.VestingAdded();
         const vestingId = (await vesting.queryFilter(filter))[0].args.vestingId;
-        console.log("vestingId", vestingId);
 
         await advanceTime(86400 * 15);  // Fast forward 15 days
 
@@ -214,5 +205,67 @@ describe("TyrionVestingTest", function() {
 
         expect(await vesting.withdrawableAmount(vestingId)).to.equal(amount);
         // expect(await vesting.withdrawableAmount(vestingId)).to.be.closeTo(expectedAmount, 1);  // 2/3 of the tokens should have vested
+    });
+
+    describe("pauseVesting()", function() {
+        it("Should pause and unpause a vesting schedule", async function() {
+            let startTime = (await ethers.provider.getBlock()).timestamp;
+            await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
+            await vesting.connect(beneficiary1).addVesting(beneficiary2.address, token.address, startTime, 1000, parseEther("100"), true, { value: parseEther("1") });
+
+            // Pause the vesting
+            await vesting.connect(beneficiary1).pauseVesting(0, true);
+            expect((await vesting.getVestingById(0)).pausedAt).to.not.equal(0);
+
+            advanceTime(200);
+            await vesting.connect(beneficiary2).withdraw(0);  // Should fail because the vesting is paused
+
+            // Unpause the vesting
+            await vesting.connect(beneficiary1).pauseVesting(0, false);
+            expect((await vesting.getVestingById(0)).pausedAt).to.equal(0);
+        });
+    });
+
+    describe("changeVestingOwner()", function() {
+        it("Should change the owner of a vesting schedule", async function() {
+            let startTime = (await ethers.provider.getBlock()).timestamp;
+            await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
+            await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, 1000, parseEther("100"), true, { value: parseEther("1") });
+            await vesting.connect(beneficiary1).changeVestingOwner(0, beneficiary2.address);
+            expect((await vesting.getVestingById(0)).owner).to.equal(beneficiary2.address);
+        });
+    });
+
+    describe("transferVestingBeneficiary()", function() {
+        it("Should transfer the beneficiary of a vesting", async function() {
+            let startTime = (await ethers.provider.getBlock()).timestamp;
+            await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
+            await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, 1000, parseEther("100"), true, { value: parseEther("1") });
+            await vesting.connect(beneficiary1).transferVestingBeneficiary(0, beneficiary2.address);
+            expect((await vesting.getVestingById(0)).beneficiary).to.equal(beneficiary2.address);
+        });
+    });
+
+    describe("extendVesting()", function() {
+        it("Should extend the duration of a vesting", async function() {
+            const originalDuration = 1000; // Assuming this is the initial duration
+            let startTime = (await ethers.provider.getBlock()).timestamp;
+            await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
+            await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, originalDuration, parseEther("100"), true, { value: parseEther("1") });
+
+            const newDuration = originalDuration + 500;
+            await vesting.connect(beneficiary1).extendVesting(0, newDuration);
+            expect((await vesting.getVestingById(0)).duration).to.equal(newDuration);
+        });
+
+        it("Should not allow decreasing the vesting duration", async function() {
+            const originalDuration = 1000;
+            let startTime = (await ethers.provider.getBlock()).timestamp;
+            await token.connect(beneficiary1).approve(vesting.address, parseEther("100"));
+            await vesting.connect(beneficiary1).addVesting(beneficiary1.address, token.address, startTime, originalDuration, parseEther("100"), true, { value: parseEther("1") });
+
+            const shorterDuration = originalDuration - 500;
+            await expect(vesting.connect(beneficiary1).extendVesting(0, shorterDuration)).to.be.revertedWith("Duration should be greater than previous");
+        });
     });
 });
