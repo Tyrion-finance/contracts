@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: GPL
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -13,7 +13,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
     Counters.Counter private vestingIdCounter;
 
     uint256 public vestingFee = 0.03 ether; // Default fee, can be set by the contract owner
-    mapping(address => bool) public isExempted; // Address exemption list
+    mapping(address => bool) public isExempted; // Fee exemption list
 
     struct VestingSchedule {
         uint256 id;
@@ -23,6 +23,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         uint256 duration;
         uint256 totalAmount;
         uint256 withdrawnAmount;
+        uint256 pausedAt;
     }
 
     event VestingAdded(uint256 vestingId, address indexed beneficiary, address indexed token, uint256 startTime, uint256 duration, uint256 amount);
@@ -63,7 +64,8 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
             startTime: _startTime,
             duration: _duration,
             totalAmount: _amount,
-            withdrawnAmount: 0
+            withdrawnAmount: 0,
+            pausedAt: 0
         });
 
         vestings.push(newVesting);
@@ -79,7 +81,13 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         require(vesting.startTime <= block.timestamp, "Vesting hasn't started yet");
         require(vesting.totalAmount > vesting.withdrawnAmount, "Nothing left to withdraw");
 
-        uint256 elapsed = block.timestamp - vesting.startTime;
+        uint256 elapsed;
+        if (vesting.pausedAt > 0) {
+            elapsed = vesting.pausedAt - vesting.startTime;
+        } else {
+            elapsed = block.timestamp - vesting.startTime;
+        }
+
         uint256 vestedAmount = (vesting.totalAmount * Math.min(elapsed, vesting.duration)) / vesting.duration;
 
         require(vestedAmount > vesting.withdrawnAmount, "No vestable amount at the moment");
@@ -103,5 +111,13 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
     function setFeeExempted(address _address, bool _exempt) external onlyOwner {
         isExempted[_address] = _exempt;
+    }
+
+    function setVestingPause(uint256 vestingId, bool _isPaused) external onlyOwner {
+        require(vestingId < vestings.length, "Invalid vesting ID");
+        if (_isPaused == true)
+            vestings[vestingId].pausedAt = block.timestamp;
+        else
+            vestings[vestingId].pausedAt = 0;
     }
 }

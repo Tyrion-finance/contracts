@@ -16,10 +16,14 @@ describe("TyrionVestingTest", function() {
         TyrionVesting = await ethers.getContractFactory("TyrionVesting");
         vesting = await TyrionVesting.deploy();
 
+        // console.log("deployed contracts", token, token2, vesting);
+        // console.log("deployed addresses", token.address, token2.address, vesting.address);
+        // console.log("deployed targets", token.target, token2.target, vesting.target);
+
         await token.transfer(beneficiary1.address, parseEther("10000"));
         await token.transfer(beneficiary2.address, parseEther("10000"));
         await token.transfer(nonExempted.address, parseEther("10000"));
-        await token.connect(beneficiary1).approve(vesting.address, parseEther("1000"));
+        // await token.connect(beneficiary1).approve(vesting.target, parseEther("1000"));
     });
 
     it("should allow adding vesting with future start time by paying the correct fee", async () => {

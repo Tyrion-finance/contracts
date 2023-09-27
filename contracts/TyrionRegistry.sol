@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: GPL
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
@@ -98,12 +98,16 @@ contract TyrionRegistry is Ownable {
         if (delta > 0) {
             advertisers[advertiserId].balance += uint256(delta);
         } else if (delta < 0) {
-            publishers[publisherId].balance -= uint256(-delta);
+            advertisers[advertiserId].balance -= uint256(-delta);
         }
     }
 
     function modifyReferrerBalance(uint256 referrerId, int256 delta) external onlyOwner {
-        referrers[referrerId].balance += delta;
+        if (delta > 0) {
+            referrers[referrerId].balance += uint256(delta);
+        } else if (delta < 0) {
+            referrers[referrerId].balance -= uint256(-delta);
+        }
     }
 
     function getAdvertiserById(uint256 _advertiserId) external view returns (Advertiser memory) {

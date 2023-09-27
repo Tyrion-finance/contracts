@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: GPL
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
@@ -49,7 +49,7 @@ contract TyrionBroker is Ownable {
         tyrionToken.burn(burnAmount);
         tyrionToken.transfer(treasuryWallet, treasuryAmount);
 
-        Advertiser storage advertiser = registry.getAdvertiserById(advertiserId);
+        Advertiser memory advertiser = registry.getAdvertiserById(advertiserId);
         if (advertiser.referrer != 0) {
             registry.modifyReferrerBalance(advertiser.referrer, int256(referrerAmount));
         }
@@ -63,7 +63,6 @@ contract TyrionBroker is Ownable {
     function creditPublisher(uint256 advertiserId, uint256 publisherId, uint256 amount) external onlyOwner {
         // Ensure the server's address is authorized
         Advertiser memory advertiser = registry.getAdvertiserById(advertiserId);
-        Publisher memory publisher = registry.getPublisherById(publisherId);
 
         require(amount <= advertiser.balance, "Insufficient balance in advertiser account");
 
@@ -81,7 +80,7 @@ contract TyrionBroker is Ownable {
         tyrionToken.transfer(publisher.wallet, amount);
         // Assuming each referrer has a unique ID and is mapped to their ID
         if (publisher.referrer != 0) {
-            uint256 referrerAmount = (amount * publisherReferrerPercentage) / percentDivisor;
+            int256 referrerAmount = int256((amount * publisherReferrerPercentage) / percentDivisor);
             registry.modifyReferrerBalance(publisher.referrer, referrerAmount);
         }
 
