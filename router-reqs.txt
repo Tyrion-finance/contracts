@@ -1,0 +1,45 @@
+I'm creating an on-chain Ethereum advertising broker using the ERC20 token TYRION.
+The broker will include multiple parties collaborating on displaying ads via various media, and my platform
+will be the intermediary between them. The platform will be a web app, and the TYRION token will be used to
+pay for the ads. In the end the platform will be fully on chain but we're starting with limited on-chain functionality
+in a smart contract called TyrionBroker. Your goal is to write this smart contract.
+
+The following parties will be involved in the platform, and their roles & required smart contract functionalities
+are described below:
+
+Advertisers (the people who want to display ads):
+    - Anyone can register as an advertiser using their web3 wallet.
+    - We can also register advertisers without using wallets - so that we can register advertisers that don't have wallets.
+    - Advertisers can deposit TYRION tokens into their account, those tokens are non-withdrawable and are meant to be
+    used for paying publishers for displaying ads.
+    - When tokens are deposited, this is how they are split:
+        70% goes to the advertiser's balance
+        2% is burned on the TYRION contract
+        2.5% goes to referrer who referred the advertiser
+        2.5% goes to contract reserves for paying referrers of the publishers
+        the rest goes to the team wallet address
+
+Publishers (the people who display ads):
+    - They can display ads on their website, in their app, or in their game, in their telegram group... etc.
+    - A publisher must have a web3 wallet (such as metamask) and they have to register in the contract by themselves.
+    - A publisher should have a withdrawable balance which they can withdraw to their wallet.
+    - That balance will be increased by our server, after they've properly displayed an ad and we verified it.
+    - The withdrawable balances of all publishers should obviously not exceed the total balance of what advertisers
+    deposited to the contract.
+    - When a publisher withdraws their balance, if they have a referrer, that referrer balance should receive 2.5% of the
+    initially deposited amount corresponding to the amount being withdrawn, taken from the contract reserves for
+    referrers.
+
+Referrer:
+    - Anybody can become a referrer and send people to the platform.
+    - They should register in our smart contract to become a referrer.
+    - Our server should then receive their referrer ID and use it to generate a referral link for them.
+    - When either an advertiser or publisher registers using their referral link, it should be marked in the contract.
+    - The referrer has a withdrawable balance which they can withdraw to their wallet, and it's updated when publishers
+    withdraw their balance or when advertisers deposit tokens.
+
+It should be possible to upgrade contract functionality, in a way that doesn't affect the existing data, and friendly
+to the community so they're not afraid of malicious activities.
+
+All contracts should emit events which allow for easy browsing through publishers, advertisers, referrers and
+their transactions.
