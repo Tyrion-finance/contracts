@@ -30,8 +30,8 @@ contract TyrionBroker is Ownable {
     event WithdrawnPublisher(uint256 indexed publisherId, uint256 amount);
     event WithdrawnReferrer(uint256 indexed referrerId, uint256 amount);
 
-    constructor(address _treasuryWallet, address _tyrionTokenAddress, address _registryAddress) {
-        treasuryWallet = _treasuryWallet;
+    constructor(address _tyrionTokenAddress, address _registryAddress) {
+        treasuryWallet = msg.sender;
         tyrionToken = ITYRION(_tyrionTokenAddress);
         registry = TyrionRegistry(_registryAddress);
     }
