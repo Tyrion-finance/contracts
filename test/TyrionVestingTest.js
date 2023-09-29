@@ -78,7 +78,7 @@ describe("TyrionVestingTest", function() {
 
         // After half of the vesting duration (50 seconds out of 100), half the amount should be vestable
         await advanceTime(500);
-        await vesting.connect(beneficiary1).withdraw(0);
+        await vesting.connect(beneficiary1).withdraw(0, {value: parseEther("0.1")});
 
         let currentBalance = await token.balanceOf(beneficiary1.address);
 
@@ -218,7 +218,7 @@ describe("TyrionVestingTest", function() {
             expect((await vesting.getVestingById(0)).pausedAt).to.not.equal(0);
 
             advanceTime(200);
-            await vesting.connect(beneficiary2).withdraw(0);  // Should fail because the vesting is paused
+            await vesting.connect(beneficiary2).withdraw(0, { value: parseEther("0.1") });  // Should fail because the vesting is paused
 
             // Unpause the vesting
             await vesting.connect(beneficiary1).pauseVesting(0, false);
@@ -266,6 +266,40 @@ describe("TyrionVestingTest", function() {
 
             const shorterDuration = originalDuration - 500;
             await expect(vesting.connect(beneficiary1).extendVesting(0, shorterDuration)).to.be.revertedWith("Duration should be greater than previous");
+        });
+    });
+
+    describe("setWithdrawalFee function", function() {
+        it("Should revert if caller is not the owner", async function() {
+            await expect(vesting.connect(beneficiary1).setWithdrawalFee(1)).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should revert if new fee is not less than previous", async function() {
+            await expect(vesting.setWithdrawalFee(parseEther("1"))).to.be.revertedWith("New fee should be less than previous");
+        });
+
+        it("Should set new fee if conditions met", async function() {
+            const oldFee = await vesting.withdrawalFee();
+            const newFee = oldFee.sub(1);
+            await vesting.setWithdrawalFee(newFee);
+            expect(await vesting.withdrawalFee()).to.equal(newFee);
+        });
+    });
+
+    describe("withdrawEth function", function() {
+        it("Should revert if caller is not the owner", async function() {
+            await expect(vesting.connect(beneficiary1).withdrawEth(beneficiary1.address)).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should transfer all contract ETH balance to the specified address", async function() {
+            const depositAmount = ethers.utils.parseEther("1");
+            await owner.sendTransaction({ to: vesting.address, value: depositAmount });
+
+            const initialBalance = await ethers.provider.getBalance(owner.address);
+            await vesting.withdrawEth(owner.address);
+
+            const finalBalance = await ethers.provider.getBalance(owner.address);
+            almostEqual(finalBalance, initialBalance.add(depositAmount), 0.1);
         });
     });
 });

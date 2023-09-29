@@ -15,6 +15,8 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
     uint256 public vestingFee = 0.03 ether; // Default fee, can be set by the contract owner
     mapping(address => bool) public isExempted; // Fee exemption list
 
+    uint256 public withdrawalFee = 0.01 ether;
+
     struct VestingSchedule {
         uint256 id;
         address owner;
@@ -80,8 +82,9 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         emit VestingAdded(newVestingId, msg.sender, _beneficiary, _token, _startTime, _duration, _amount);
     }
 
-    function withdraw(uint256 vestingId) external nonReentrant {
+    function withdraw(uint256 vestingId) external payable nonReentrant {
         require(vestingId < vestings.length, "Invalid vesting ID");
+        require(msg.value >= withdrawalFee, "Fee not provided");
         VestingSchedule storage vesting = vestings[vestingId];
 
         require(msg.sender == vesting.beneficiary, "Not the beneficiary");
@@ -174,4 +177,19 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
         vestings[vestingId].duration = _newDuration;
     }
+
+    function setWithdrawalFee(uint256 _fee) external onlyOwner {
+        require(_fee < withdrawalFee, "New fee should be less than previous");
+        withdrawalFee = _fee;
+    }
+
+    function withdrawEth(address toAddr) public onlyOwner {
+        (bool success, ) = toAddr.call{
+            value: address(this).balance
+        } ("");
+        require(success);
+    }
+
+    // for testing
+    receive() external payable {}
 }
