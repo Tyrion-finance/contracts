@@ -189,4 +189,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         } ("");
         require(success);
     }
+
+    // for testing
+    receive() external payable {}
 }
