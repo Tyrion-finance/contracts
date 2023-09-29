@@ -1,20 +1,23 @@
 const { expect } = require("chai");
 
 describe("TyrionBroker and TyrionRegistry", function() {
-    let TyrionBroker, TyrionRegistry, tyrionBroker, tyrionRegistry, owner, addr1, addr2, addr3;
+    let TyrionBroker, TyrionRegistry, tyrion, tyrionBroker, tyrionRegistry, owner, addr1, addr2, addr3;
 
     beforeEach(async function() {
         // Get the ContractFactory and Signers here.
+        Tyrion = await ethers.getContractFactory("Tyrion");
         TyrionBroker = await ethers.getContractFactory("TyrionBroker");
         TyrionRegistry = await ethers.getContractFactory("TyrionRegistry");
 
         [owner, addr1, addr2, addr3] = await ethers.getSigners();
 
+        tyrion = await Tyrion.deploy(ethers.constants.AddressZero);
+
         // Deploy the TyrionRegistry contract first since it might be required in TyrionBroker's constructor.
-        tyrionRegistry = await TyrionRegistry.deploy(/*...arguments if any...*/);
+        tyrionRegistry = await TyrionRegistry.deploy();
 
         // Deploy the TyrionBroker contract.
-        tyrionBroker = await TyrionBroker.deploy(/*...arguments which might include tyrionRegistry's address...*/);
+        tyrionBroker = await TyrionBroker.deploy(tyrion.address, tyrionRegistry.address);
     });
 
     describe("TyrionRegistry", function() {

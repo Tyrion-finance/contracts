@@ -76,8 +76,8 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     address public taxWallet;
     bool private swapping;
 
-    IUniswapV2Router02 public immutable uniswapV2Router;
-    address public immutable uniswapV2Pair;
+    IUniswapV2Router02 public uniswapV2Router;
+    address public uniswapV2Pair;
 
     mapping(address => bool) public isExcludedFromFees;
     mapping(address => bool) public automatedMarketMakerPairs;
@@ -85,15 +85,16 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     uint256 public uniswapDeployBlock;
     bool public isBlacklistActive;
 
-    constructor()
+    constructor(address uniswapAddress)
         ERC20("Tyrion.finance", "TYRION")
         ERC20Permit("Tyrion.finance")
     {
-        uniswapV2Router = IUniswapV2Router02(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D //Uniswap V2 Router
-        );
-        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory())
-            .createPair(address(this), uniswapV2Router.WETH());
+        // Uniswap on mainnet 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+        if (uniswapAddress != address(0)) {
+            uniswapV2Router = IUniswapV2Router02(uniswapAddress);
+            uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory())
+                .createPair(address(this), uniswapV2Router.WETH());
+        }
 
         setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
         excludeFromFees(msg.sender, true);
