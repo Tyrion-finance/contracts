@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL
+
 pragma solidity ^0.8.9;
 
 /*
@@ -8,12 +9,6 @@ TG: https://t.me/tyrionfinance
 Twitter: https://twitter.com/tyrionfinance
 
 */
-
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IUniswapV2Factory {
     event PairCreated(
@@ -76,8 +71,8 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     address public taxWallet;
     bool private swapping;
 
-    IUniswapV2Router02 public uniswapV2Router;
-    address public uniswapV2Pair;
+    IUniswapV2Router02 public immutable uniswapV2Router;
+    address public immutable uniswapV2Pair;
 
     mapping(address => bool) public isExcludedFromFees;
     mapping(address => bool) public automatedMarketMakerPairs;
@@ -85,16 +80,15 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     uint256 public uniswapDeployBlock;
     bool public isBlacklistActive;
 
-    constructor(address uniswapAddress)
+    constructor()
         ERC20("Tyrion.finance", "TYRION")
         ERC20Permit("Tyrion.finance")
     {
-        // Uniswap on mainnet 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-        if (uniswapAddress != address(0)) {
-            uniswapV2Router = IUniswapV2Router02(uniswapAddress);
-            uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory())
-                .createPair(address(this), uniswapV2Router.WETH());
-        }
+        uniswapV2Router = IUniswapV2Router02(
+            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D //Uniswap V2 Router
+        );
+        uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory())
+            .createPair(address(this), uniswapV2Router.WETH());
 
         setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
         excludeFromFees(msg.sender, true);
@@ -185,10 +179,6 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
         taxWallet = newWallet;
     }
 
-    function setSwapTokensAtAmount(uint256 newAmount) public onlyOwner {
-        swapTokensAtAmount = newAmount;
-    }
-
     function excludeFromFees(address account, bool excluded) public onlyOwner {
         isExcludedFromFees[account] = excluded;
     }
@@ -260,3 +250,4 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
 
     receive() external payable {}
 }
+
