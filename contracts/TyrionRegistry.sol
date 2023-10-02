@@ -40,9 +40,9 @@ contract TyrionRegistry is Ownable {
     uint256 public nextPublisherId = 1;
     uint256 public nextReferrerId = 1;
 
-    event RegisteredAdvertiser(uint256 indexed advertiserId, uint256 indexed referrer);
-    event RegisteredPublisher(uint256 indexed publisherId, uint256 indexed referrer);
-    event RegisteredReferrer(uint256 indexed referrerId);
+    event RegisteredAdvertiser(uint256 indexed advertiserId, address wallet, uint256 indexed referrer);
+    event RegisteredPublisher(uint256 indexed publisherId, address wallet, uint256 indexed referrer);
+    event RegisteredReferrer(uint256 indexed referrerId, address wallet);
 
     constructor() {
     }
@@ -56,7 +56,7 @@ contract TyrionRegistry is Ownable {
             referrer: referrerId
         });
 
-        emit RegisteredAdvertiser(advertiserId, referrerId);
+        emit RegisteredAdvertiser(advertiserId, advertiserWallet, referrerId);
         nextAdvertiserId++;
     }
 
@@ -69,7 +69,7 @@ contract TyrionRegistry is Ownable {
             referrer: referrerId
         });
 
-        emit RegisteredPublisher(publisherId, referrerId);
+        emit RegisteredPublisher(publisherId, publisherWallet, referrerId);
 
         nextPublisherId++;
     }
@@ -82,7 +82,7 @@ contract TyrionRegistry is Ownable {
             balance: 0
         });
 
-        emit RegisteredReferrer(nextReferrerId);
+        emit RegisteredReferrer(nextReferrerId, referrerWallet);
         nextReferrerId++;
     }
 
