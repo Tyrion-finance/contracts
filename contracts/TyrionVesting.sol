@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-
 contract TyrionVesting is Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
     Counters.Counter private vestingIdCounter;
