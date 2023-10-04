@@ -1,73 +1,77 @@
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
+const helpers = require("@nomicfoundation/hardhat-network-helpers")
 
-describe("TyrionBroker and TyrionRegistry", function() {
-    let TyrionBroker, TyrionRegistry, tyrion, tyrionBroker, tyrionRegistry, owner, addr1, addr2, addr3;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-    beforeEach(async function() {
-        // Get the ContractFactory and Signers here.
-        Tyrion = await ethers.getContractFactory("Tyrion");
-        TyrionBroker = await ethers.getContractFactory("TyrionBroker");
-        TyrionRegistry = await ethers.getContractFactory("TyrionRegistry");
+describe("TyrionBroker", function () {
+    let tyrionToken, tyrionRegistry, tyrionBroker, owner, advertiser, publisher, referrer;
 
-        [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    beforeEach(async function () {
+        const TyrionToken = await ethers.getContractFactory("Tyrion");
+        tyrionToken = await TyrionToken.deploy(ZERO_ADDRESS);
 
-        tyrion = await Tyrion.deploy(ethers.constants.AddressZero);
-
-        // Deploy the TyrionRegistry contract first since it might be required in TyrionBroker's constructor.
+        const TyrionRegistry = await ethers.getContractFactory("TyrionRegistry");
         tyrionRegistry = await TyrionRegistry.deploy();
 
-        // Deploy the TyrionBroker contract.
-        tyrionBroker = await TyrionBroker.deploy(tyrion.address, tyrionRegistry.address);
+        const TyrionBroker = await ethers.getContractFactory("TyrionBroker");
+        [owner, advertiser, publisher, referrer] = await ethers.getSigners();
+        tyrionBroker = await TyrionBroker.deploy(tyrionToken.address, tyrionRegistry.address);
+
+        await tyrionRegistry.transferOwnership(tyrionBroker.address);
+
+        await tyrionRegistry.registerReferrer(referrer.address);
+        await tyrionRegistry.registerAdvertiser(advertiser.address, 1);
+        await tyrionRegistry.registerPublisher(publisher.address, 1);
+
+        await tyrionToken.transfer(advertiser.address, ethers.utils.parseEther("1000"));
+        await tyrionToken.connect(advertiser).approve(tyrionBroker.address, ethers.utils.parseEther("1000"));
     });
 
-    describe("TyrionRegistry", function() {
-        it("Should register a new advertiser", async function() {
-            await tyrionRegistry.registerAdvertiser(/*...arguments...*/);
-            const advertiser = await tyrionRegistry.getAdvertiserById(1);
-            expect(advertiser).to.exist;
-        });
-
-        it("Should register a new publisher", async function() {
-            await tyrionRegistry.registerPublisher(/*...arguments...*/);
-            const publisher = await tyrionRegistry.getPublisherById(1);
-            expect(publisher).to.exist;
-        });
-
-        it("Should register a new referrer", async function() {
-            await tyrionRegistry.registerReferrer(/*...arguments...*/);
-            const referrer = await tyrionRegistry.getReferrerById(1);
-            expect(referrer).to.exist;
-        });
+    it("Should deposit tokens for an advertiser", async function () {
+        const amount = ethers.utils.parseEther("100");
+        await tyrionBroker.connect(advertiser).depositTokens(1, amount);
+        const advertiserData = await tyrionRegistry.getAdvertiserById(1);
+        expect(advertiserData.balance).to.be.gt(0);
     });
 
-    describe("TyrionBroker", function() {
-        it("Should allow depositing tokens", async function() {
-            // Assuming TYRION token is ERC20 compliant and there's a mock available for testing.
-            const TYRIONMock = await ethers.getContractFactory("TYRIONMock");
-            const tyrionToken = await TYRIONMock.deploy();
-            await tyrionToken.mint(owner.address, 1000);
+    it("Should credit a publisher", async function () {
+        const amount = ethers.utils.parseEther("100");
+        await tyrionBroker.connect(advertiser).depositTokens(1, amount);
+        await tyrionBroker.creditPublisher(1, 1, amount.div(2));
+        const publisherData = await tyrionRegistry.getPublisherById(1);
+        expect(publisherData.balance).to.be.gt(0);
+    });
 
-            // Approve the TyrionBroker contract to spend tokens on behalf of owner
-            await tyrionToken.approve(tyrionBroker.address, 500);
+    it("Should allow a publisher to withdraw", async function () {
+        const depositAmount = ethers.utils.parseEther("100");
+        const withdrawAmount = ethers.utils.parseEther("50");
+        await tyrionBroker.connect(advertiser).depositTokens(1, depositAmount);
+        await tyrionBroker.creditPublisher(1, 1, depositAmount);
+        await tyrionBroker.connect(publisher).publisherWithdraw(1, withdrawAmount);
+        const publisherData = await tyrionRegistry.getPublisherById(1);
+        expect(publisherData.balance).to.equal(depositAmount.sub(withdrawAmount));
+    });
 
-            await tyrionBroker.depositTokens(1, 500);  // Assume advertiserId 1 exists.
+    it("Should allow a referrer to withdraw", async function () {
+        const amount = ethers.utils.parseEther("100");
+        await tyrionBroker.connect(advertiser).depositTokens(1, amount);
+        await tyrionBroker.connect(referrer).referrerWithdraw(1);
+        const referrerData = await tyrionRegistry.getReferrerById(1);
+        expect(referrerData.balance).to.equal(0);
+    });
 
-            const advertiser = await tyrionRegistry.getAdvertiserById(1);
-            expect(advertiser.balance).to.equal(350);  // 70% of 500.
-        });
+    it("Should modify the treasury wallet and percentages", async function () {
+        const newWallet = publisher.address;
+        const newPercentages = [600, 10, 20, 20];
 
-        it("Should allow referrers to withdraw their accrued tokens", async function() {
-            // Assuming some flow where the referrer has earned tokens, e.g., through the depositTokens function.
-            // For simplicity, let's directly increase the referrer's balance here.
-            const referrerId = 1;  // Assume referrerId 1 exists.
-            const initialBalance = await ethers.provider.getBalance(addr1.address);
+        await tyrionBroker.setTreasuryWallet(newWallet);
+        expect(await tyrionBroker.treasuryWallet()).to.equal(newWallet);
 
-            await tyrionBroker.referrerWithdraw(referrerId);
-
-            const newBalance = await ethers.provider.getBalance(addr1.address);
-            expect(newBalance).to.be.gt(initialBalance);
-        });
-
-        //... other tests, e.g., for publishers, withdrawals, etc.
+        await tyrionBroker.setPercentages(...newPercentages);
+        expect(await tyrionBroker.advertiserPercentage()).to.equal(newPercentages[0]);
+        expect(await tyrionBroker.burnPercentage()).to.equal(newPercentages[1]);
+        expect(await tyrionBroker.referrerDepositPercentage()).to.equal(newPercentages[2]);
+        expect(await tyrionBroker.publisherReferrerPercentage()).to.equal(newPercentages[3]);
     });
 });

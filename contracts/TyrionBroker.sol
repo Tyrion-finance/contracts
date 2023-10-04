@@ -12,7 +12,7 @@ import "./TyrionRegistry.sol";
 interface ITYRION {
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    function burn(uint256 amount) external returns (bool);
+    function burn(uint256 amount) external;
 }
 
 contract TyrionBroker is Ownable {
