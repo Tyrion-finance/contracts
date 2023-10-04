@@ -41,6 +41,8 @@ async function mainETH() {
     const tyrionBroker = await TyrionBroker.deploy(tyrion.address, tyrionRegistry.address);
     console.log("TyrionBroker", tyrionBroker.address);
 
+    await tyrionRegistry.transferOwnership(tyrionBroker.address);
+
     const [owner, user1, user2, user3] = await ethers.getSigners();
 
 }
