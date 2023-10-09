@@ -45,12 +45,13 @@ describe("TyrionBroker", function () {
 
     it("Should allow a publisher to withdraw", async function () {
         const depositAmount = ethers.utils.parseEther("100");
+        const forPublisherAmount = ethers.utils.parseEther("70");
         const withdrawAmount = ethers.utils.parseEther("50");
         await tyrionBroker.connect(advertiser).depositTokens(1, depositAmount);
-        await tyrionBroker.creditPublisher(1, 1, depositAmount);
+        await tyrionBroker.creditPublisher(1, 1, forPublisherAmount);
         await tyrionBroker.connect(publisher).publisherWithdraw(1, withdrawAmount);
         const publisherData = await tyrionRegistry.getPublisherById(1);
-        expect(publisherData.balance).to.equal(depositAmount.sub(withdrawAmount));
+        expect(publisherData.balance).to.equal(forPublisherAmount.sub(withdrawAmount));
     });
 
     it("Should allow a referrer to withdraw", async function () {

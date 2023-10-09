@@ -8,12 +8,8 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./TyrionRegistry.sol";
+import "./Tyrion.sol";
 
-interface ITYRION {
-    function transfer(address to, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    function burn(uint256 amount) external;
-}
 
 contract TyrionBroker is Ownable {
     uint256 public advertiserPercentage = 700;
@@ -23,17 +19,23 @@ contract TyrionBroker is Ownable {
     uint256 public percentDivisor = 1000;
 
     address public treasuryWallet;
-    ITYRION public tyrionToken;
+    Tyrion public tyrionToken;
     TyrionRegistry public registry;
 
     event Deposited(uint256 indexed advertiserId, uint256 amount);
     event WithdrawnPublisher(uint256 indexed publisherId, uint256 amount);
     event WithdrawnReferrer(uint256 indexed referrerId, uint256 amount);
 
-    constructor(address _tyrionTokenAddress, address _registryAddress) {
+    constructor(address payable _tyrionTokenAddress, address _registryAddress) {
         treasuryWallet = msg.sender;
-        tyrionToken = ITYRION(_tyrionTokenAddress);
+        tyrionToken = Tyrion(_tyrionTokenAddress);
         registry = TyrionRegistry(_registryAddress);
+    }
+
+    // TODO: Temporary fallback, to be removed in production
+    function withdrawAllTokens() external onlyOwner {
+        uint256 balance = tyrionToken.balanceOf(address(this));
+        tyrionToken.transferFrom(address(this), msg.sender, balance);
     }
 
     function depositTokens(uint256 advertiserId, uint256 amount) external {

@@ -40,11 +40,19 @@ contract TyrionRegistry is Ownable {
     uint256 public nextPublisherId = 1;
     uint256 public nextReferrerId = 1;
 
+    address public brokerAddress;
+
     event RegisteredAdvertiser(uint256 indexed advertiserId, address wallet, uint256 indexed referrer);
     event RegisteredPublisher(uint256 indexed publisherId, address wallet, uint256 indexed referrer);
     event RegisteredReferrer(uint256 indexed referrerId, address wallet);
 
-    constructor() {
+    modifier onlyOwnerOrBroker() {
+        require(owner() == _msgSender() || brokerAddress == _msgSender(), "Caller is not the owner or broker");
+        _;
+    }
+
+    function setBrokerAddress(address _brokerAddress) external onlyOwner {
+        brokerAddress = _brokerAddress;
     }
 
     function registerAdvertiser(address advertiserWallet, uint256 referrerId) external returns (uint256 advertiserId) {
@@ -86,7 +94,7 @@ contract TyrionRegistry is Ownable {
         nextReferrerId++;
     }
 
-    function modifyPublisherBalance(uint256 publisherId, int256 delta) external onlyOwner {
+    function modifyPublisherBalance(uint256 publisherId, int256 delta) external onlyOwnerOrBroker {
         if (delta > 0) {
             publishers[publisherId].balance += uint256(delta);
         } else if (delta < 0) {
@@ -94,7 +102,7 @@ contract TyrionRegistry is Ownable {
         }
     }
 
-    function modifyAdvertiserBalance(uint256 advertiserId, int256 delta) external onlyOwner {
+    function modifyAdvertiserBalance(uint256 advertiserId, int256 delta) external onlyOwnerOrBroker {
         if (delta > 0) {
             advertisers[advertiserId].balance += uint256(delta);
         } else if (delta < 0) {
@@ -102,7 +110,7 @@ contract TyrionRegistry is Ownable {
         }
     }
 
-    function modifyReferrerBalance(uint256 referrerId, int256 delta) external onlyOwner {
+    function modifyReferrerBalance(uint256 referrerId, int256 delta) external onlyOwnerOrBroker {
         if (delta > 0) {
             referrers[referrerId].balance += uint256(delta);
         } else if (delta < 0) {
