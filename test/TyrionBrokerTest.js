@@ -18,7 +18,7 @@ describe("TyrionBroker", function () {
         [owner, advertiser, publisher, referrer] = await ethers.getSigners();
         tyrionBroker = await TyrionBroker.deploy(tyrionToken.address, tyrionRegistry.address);
 
-        await tyrionRegistry.transferOwnership(tyrionBroker.address);
+        await tyrionRegistry.setBrokerAddress(tyrionBroker.address);
 
         await tyrionRegistry.registerReferrer(referrer.address);
         await tyrionRegistry.registerAdvertiser(advertiser.address, 1);
