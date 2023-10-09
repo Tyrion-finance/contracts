@@ -3,11 +3,13 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+//import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 struct Advertiser {
     uint256 id;
@@ -29,16 +31,16 @@ struct Referrer {
     uint256 balance;
 }
 
-contract TyrionRegistry is Ownable {
+contract TyrionRegistry is OwnableUpgradeable {
     using SafeMath for uint256;
 
     mapping(uint256 => Advertiser) public advertisers;
     mapping(uint256 => Publisher) public publishers;
     mapping(uint256 => Referrer) public referrers;
 
-    uint256 public nextAdvertiserId = 1;
-    uint256 public nextPublisherId = 1;
-    uint256 public nextReferrerId = 1;
+    uint256 public nextAdvertiserId;
+    uint256 public nextPublisherId;
+    uint256 public nextReferrerId;
 
     address public brokerAddress;
 
@@ -49,6 +51,13 @@ contract TyrionRegistry is Ownable {
     modifier onlyOwnerOrBroker() {
         require(owner() == _msgSender() || brokerAddress == _msgSender(), "Caller is not the owner or broker");
         _;
+    }
+
+    function initialize() public initializer {
+        nextAdvertiserId = 1;
+        nextPublisherId = 1;
+        nextReferrerId = 1;
+        __Ownable_init();
     }
 
     function setBrokerAddress(address _brokerAddress) external onlyOwner {
