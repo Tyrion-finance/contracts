@@ -57,6 +57,9 @@ describe("TyrionBroker", function () {
     it("Should allow a referrer to withdraw", async function () {
         const amount = ethers.utils.parseEther("100");
         await tyrionBroker.connect(advertiser).depositTokens(1, amount);
+        const referrerDataPre = await tyrionRegistry.getReferrerById(1);
+        expect(referrerDataPre.balance).to.gt(0);
+
         await tyrionBroker.connect(referrer).referrerWithdraw(1);
         const referrerData = await tyrionRegistry.getReferrerById(1);
         expect(referrerData.balance).to.equal(0);
@@ -74,5 +77,33 @@ describe("TyrionBroker", function () {
         expect(await tyrionBroker.burnPercentage()).to.equal(newPercentages[1]);
         expect(await tyrionBroker.referrerDepositPercentage()).to.equal(newPercentages[2]);
         expect(await tyrionBroker.publisherReferrerPercentage()).to.equal(newPercentages[3]);
+    });
+
+    describe("withdrawAllTokens", function() {
+        beforeEach(async function() {
+            // Let's deposit some tokens to the contract to simulate the real-world scenario.
+            // Assuming you have a deposit function in your contract. If not, adapt as necessary.
+            const amount = ethers.utils.parseEther("100");
+            await tyrionToken.transfer(tyrionBroker.address, amount);
+        });
+
+        it("Should allow owner to withdraw all tokens", async function() {
+            const initialOwnerBalance = await tyrionToken.balanceOf(owner.address);
+            const initialContractBalance = await tyrionToken.balanceOf(tyrionBroker.address);
+
+            await expect(initialContractBalance).to.be.gt(0); // Make sure the contract has some tokens.
+
+            await tyrionBroker.connect(owner).withdrawAllTokens();
+
+            const finalOwnerBalance = await tyrionToken.balanceOf(owner.address);
+            const finalContractBalance = await tyrionToken.balanceOf(tyrionBroker.address);
+
+            expect(finalContractBalance).to.equal(0);
+            expect(finalOwnerBalance).to.equal(initialOwnerBalance.add(initialContractBalance));
+        });
+
+        it("Should not allow non-owner to withdraw all tokens", async function() {
+            await expect(tyrionBroker.connect(advertiser).withdrawAllTokens()).to.be.revertedWith("Ownable: caller is not the owner");
+        });
     });
 });

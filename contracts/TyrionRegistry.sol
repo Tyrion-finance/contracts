@@ -78,7 +78,6 @@ contract TyrionRegistry is Ownable {
         });
 
         emit RegisteredPublisher(publisherId, publisherWallet, referrerId);
-
         nextPublisherId++;
     }
 

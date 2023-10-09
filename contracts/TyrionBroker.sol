@@ -32,10 +32,10 @@ contract TyrionBroker is Ownable {
         registry = TyrionRegistry(_registryAddress);
     }
 
-    // TODO: Temporary fallback, to be removed in production
+    // TODO: Temporary fallback for migrations, to be removed in later versions
     function withdrawAllTokens() external onlyOwner {
         uint256 balance = tyrionToken.balanceOf(address(this));
-        tyrionToken.transferFrom(address(this), msg.sender, balance);
+        tyrionToken.transfer(msg.sender, balance);
     }
 
     function depositTokens(uint256 advertiserId, uint256 amount) external {
