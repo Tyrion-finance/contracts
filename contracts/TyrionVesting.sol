@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -59,7 +59,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         require(_amount > 0, "Amount should be 0");
         require(_startTime >= block.timestamp - 30 days, "Start time shouldn't be before 30 days in the past");
 
-        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        SafeERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         newVestingId = vestingIdCounter.current();
         vestingIdCounter.increment();
@@ -100,7 +100,7 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
 
         emit Withdrawn(vesting.id, msg.sender, toWithdraw);
 
-        IERC20(vesting.token).transfer(msg.sender, toWithdraw);
+        SafeERC20(vesting.token).safeTransfer(msg.sender, toWithdraw);
     }
 
     function withdrawableAmount(uint256 vestingId) public view returns (uint256) {
@@ -123,6 +123,13 @@ contract TyrionVesting is Ownable, ReentrancyGuard {
         }
 
         uint256 vestedAmount = (vesting.totalAmount * Math.min(elapsed, vesting.duration)) / vesting.duration;
+
+        // This can happen if vesting is time is extended and the withdrawnAmount is now greater than the currently
+        // vested amount. I.e. vesting is for 2 months, after 1 month 50% was withdrawn, then we extend the vesting
+        // to 4 months. Now the vested amount is 25% and the withdrawn amount is 50%.
+        if (vesting.withdrawnAmount > vestedAmount) {
+            return 0;
+        }
 
         return vestedAmount - vesting.withdrawnAmount;
     }
