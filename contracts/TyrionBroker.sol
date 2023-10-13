@@ -3,20 +3,22 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+//import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./TyrionRegistry.sol";
 import "./Tyrion.sol";
 
 
-contract TyrionBroker is Ownable {
-    uint256 public advertiserPercentage = 700;
-    uint256 public burnPercentage = 20;
-    uint256 public referrerDepositPercentage = 25;
-    uint256 public publisherReferrerPercentage = 25;
-    uint256 public percentDivisor = 1000;
+contract TyrionBroker is OwnableUpgradeable {
+    uint256 public advertiserPercentage;
+    uint256 public burnPercentage;
+    uint256 public referrerDepositPercentage;
+    uint256 public publisherReferrerPercentage;
+    uint256 public percentDivisor;
 
     address public treasuryWallet;
     Tyrion public tyrionToken;
@@ -26,10 +28,18 @@ contract TyrionBroker is Ownable {
     event WithdrawnPublisher(uint256 indexed publisherId, uint256 amount);
     event WithdrawnReferrer(uint256 indexed referrerId, uint256 amount);
 
-    constructor(address payable _tyrionTokenAddress, address _registryAddress) {
+    function initialize(address payable _tyrionTokenAddress, address _registryAddress) public initializer {
+        advertiserPercentage = 700;
+        burnPercentage = 20;
+        referrerDepositPercentage = 25;
+        publisherReferrerPercentage = 25;
+        percentDivisor = 1000;
+
         treasuryWallet = msg.sender;
         tyrionToken = Tyrion(_tyrionTokenAddress);
         registry = TyrionRegistry(_registryAddress);
+
+        __Ownable_init();
     }
 
     // TODO: Temporary fallback for migrations, to be removed in later versions
@@ -117,4 +127,6 @@ contract TyrionBroker is Ownable {
         referrerDepositPercentage = _referrerDepositPercentage;
         publisherReferrerPercentage = _publisherReferrerPercentage;
     }
+
+    function whatever() external {}
 }
