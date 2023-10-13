@@ -137,4 +137,6 @@ contract TyrionRegistry is OwnableUpgradeable {
     function getReferrerById(uint256 _referrerId) external view returns (Referrer memory) {
         return referrers[_referrerId];
     }
+
+    function whatever() external {}
 }

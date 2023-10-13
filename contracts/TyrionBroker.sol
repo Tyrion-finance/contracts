@@ -127,4 +127,6 @@ contract TyrionBroker is OwnableUpgradeable {
         referrerDepositPercentage = _referrerDepositPercentage;
         publisherReferrerPercentage = _publisherReferrerPercentage;
     }
+
+    function whatever() external {}
 }
