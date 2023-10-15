@@ -13,10 +13,12 @@ describe("TyrionBroker", function () {
 
         const TyrionRegistry = await ethers.getContractFactory("TyrionRegistry");
         tyrionRegistry = await TyrionRegistry.deploy();
+        await tyrionRegistry.initialize();
 
         const TyrionBroker = await ethers.getContractFactory("TyrionBroker");
         [owner, advertiser, publisher, referrer] = await ethers.getSigners();
-        tyrionBroker = await TyrionBroker.deploy(tyrionToken.address, tyrionRegistry.address);
+        tyrionBroker = await TyrionBroker.deploy();
+        await tyrionBroker.initialize(tyrionToken.address, tyrionRegistry.address);
 
         await tyrionRegistry.setBrokerAddress(tyrionBroker.address);
 

@@ -9,6 +9,7 @@ describe("TyrionRegistry", function () {
         const TyrionRegistry = await ethers.getContractFactory("TyrionRegistry");
         [owner, addr1, addr2] = await ethers.getSigners();
         tyrionRegistry = await TyrionRegistry.deploy();
+        await tyrionRegistry.initialize();
     });
 
     it("Should register an advertiser", async function () {
