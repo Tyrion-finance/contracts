@@ -8,10 +8,12 @@ const { ethers, upgrades } = require("hardhat");
 
 const { upgradeContract } = require('./util/utils.js');
 const { upgradeMain, deployMain } = require('./util/tyrion-functions.js');
-const constvars = require('./util/const.js');
+const { ADDRESSES } = require('./util/const.js');
+const hre = require("hardhat");
 
 async function mainETH() {
-    await upgradeMain(constvars.REGISTRY_SEPOLIA, constvars.BROKER_SEPOLIA);
+    const config = ADDRESSES[hre.network.name];
+    await upgradeMain(config.REGISTRY, config.BROKER);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

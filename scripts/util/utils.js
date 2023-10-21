@@ -49,7 +49,7 @@ async function deployUpgradable(contractName, initArgs=[], verify=true) {
         await getImplementationAddress(deployedContract.address));
 
     if (verify) {
-        await verifyContract(deployedContract.address, []);
+        await verifyContract(deployedContract.address, [], false);
     }
     return deployedContract;
 }
@@ -57,12 +57,13 @@ async function deployUpgradable(contractName, initArgs=[], verify=true) {
 async function upgradeContract(contractName, proxyAddress, verify=true) {
     const MyContractFactory = await ethers.getContractFactory(contractName);
     await upgrades.upgradeProxy(proxyAddress, MyContractFactory);
-    const implAddress = getImplementationAddress(proxyAddress);
+    await sleep(60);
+    const implAddress = await getImplementationAddress(proxyAddress);
 
     console.log("Upgraded", contractName, "at", proxyAddress, "to", implAddress);
 
     if (verify) {
-        await verifyContract(implAddress, []);
+        await verifyContract(implAddress, [], false);
     }
 
     return implAddress;

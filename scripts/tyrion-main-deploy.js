@@ -7,10 +7,12 @@
 const hre = require("hardhat");
 const { upgradeMain, deployMain } = require('./util/tyrion-functions.js');
 const { TYRION_MAINNET, TYRION_SEPOLIA } = require('./util/const.js');
+const {ADDRESSES} = require("./util/const");
 
 
 async function mainETH() {
-    await deployMain(TYRION_SEPOLIA);
+    const config = ADDRESSES[hre.network.name];
+    await deployMain(config.TYRION);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
