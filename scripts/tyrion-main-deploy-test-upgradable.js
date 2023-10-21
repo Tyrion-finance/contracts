@@ -9,7 +9,8 @@ async function mainETH() {
     // const tyrion = await Tyrion.deploy(ethers.constants.AddressZero);
     // console.log("Tyrion", tyrion.address);
     const tyrion = {
-        address: '0x881020118fb2A40B81D819eCD32C9A417d914aCA'
+        // address: '0x881020118fb2A40B81D819eCD32C9A417d914aCA'
+        address: '0x5e27e384aCBBa20982f991893B9970AaF3f43181'
     }
 
     const tyrionRegistry = await deployUpgradable('TyrionRegistry', []);

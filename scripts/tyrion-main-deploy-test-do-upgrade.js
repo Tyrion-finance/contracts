@@ -19,8 +19,10 @@ async function mainETH() {
     const registryProxyAddress = '0x996957FE80547002FcD000Add27ffE8B5E62431e';
     const brokerProxyAddress = '0xc28d813030739ecf9F5AEa1563D618215CC60181';
 
-    const regImplAddress = upgradeContract('TyrionRegistry', registryProxyAddress);
-    const brokerImplAddress = upgradeContract('TyrionBroker', brokerProxyAddress);
+    const regImplAddress = await upgradeContract('TyrionRegistry', registryProxyAddress);
+    console.log("new registry implementation", regImplAddress);
+    const brokerImplAddress = await upgradeContract('TyrionBroker', brokerProxyAddress);
+    console.log("new broker implementation", brokerImplAddress);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const readline = require("readline");
 const {ethers, upgrades} = require("hardhat");
+// const { TransparentUpgradeableProxy } = require('hardhat-upgrades');
 
 function sleep(seconds) {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
@@ -32,7 +33,8 @@ function getUserInput(promptText) {
 }
 
 async function getImplementationAddress(proxyAddress) {
-    const ProxyContract = await ethers.getContractAt('TransparentUpgradeableProxy', proxyAddress);
+    // const TransparentUpgradeableProxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
+    const ProxyContract = await ethers.getContractAt("TransparentUpgradeableProxy", proxyAddress);
     return await ProxyContract.implementation();
 }
 
@@ -47,7 +49,7 @@ async function deployUpgradable(contractName, initArgs=[]) {
 async function upgradeContract(contractName, proxyAddress) {
     const MyContractFactory = await ethers.getContractFactory(contractName);
     await upgrades.upgradeProxy(proxyAddress, MyContractFactory);
-    const implAddress = getImplementationAddress(registryProxyAddress);
+    const implAddress = getImplementationAddress(proxyAddress);
 
     await verifyContract(implAddress, []);
     return implAddress;

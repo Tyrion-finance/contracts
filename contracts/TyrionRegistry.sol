@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-//import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -98,7 +97,7 @@ contract TyrionRegistry is OwnableUpgradeable {
             balance: 0
         });
 
-        emit RegisteredReferrer(nextReferrerId, referrerWallet);
+        emit RegisteredReferrer(referrerId, referrerWallet);
         nextReferrerId++;
     }
 
