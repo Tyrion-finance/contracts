@@ -4,13 +4,14 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const hre = require("hardhat");
-const { upgradeMain, deployMain } = require('./util/tyrion-functions.js');
-const { TYRION_MAINNET, TYRION_SEPOLIA } = require('./util/const.js');
+const { ethers, upgrades } = require("hardhat");
 
+const { upgradeContract } = require('./util/utils.js');
+const { upgradeMain, deployMain } = require('./util/tyrion-functions.js');
+const constvars = require('./util/const.js');
 
 async function mainETH() {
-    await deployMain(TYRION_SEPOLIA);
+    await upgradeMain(constvars.REGISTRY_SEPOLIA, constvars.BROKER_SEPOLIA);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
