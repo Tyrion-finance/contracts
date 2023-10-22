@@ -1,9 +1,18 @@
 
+// Aktualne non upgradable:
+// registry: 0x415fB6c993A2A77447736208Dd9344F4E10eB9b9
+// broker: 0x7a2F7e20274187c1e414A0Ee981FDCF5E4F61AC3
+
+// prod:
+// Deployed TyrionRegistry proxy at 0xdd092eC1A91F204967EEb7fBB0b3a1Cf43337F5a implementation at 0xE1bdBDfB7C260Ae4f34a40A3A7184b10FD274Bac
+// Deployed TyrionBroker proxy at 0xb7EBD02B246dEF6B600CD885913A85746C47b0C7 implementation at 0xAb2f7B952De99243687a1A7fa93329601A3f1BFB
+
+
 const ADDRESSES = {
     'mainnet': {
         'TYRION': '0x5e27e384aCBBa20982f991893B9970AaF3f43181',
-        'REGISTRY': '',
-        'BROKER': ''
+        'REGISTRY': '0xdd092eC1A91F204967EEb7fBB0b3a1Cf43337F5a',
+        'BROKER': '0xb7EBD02B246dEF6B600CD885913A85746C47b0C7'
     },
     'sepolia': {
         'TYRION': '0x881020118fb2A40B81D819eCD32C9A417d914aCA',
