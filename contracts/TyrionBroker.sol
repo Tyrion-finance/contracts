@@ -24,6 +24,8 @@ contract TyrionBroker is OwnableUpgradeable {
     Tyrion public tyrionToken;
     TyrionRegistry public registry;
 
+    address public fundsManager;
+
     event Deposited(uint256 indexed advertiserId, uint256 amount);
     event WithdrawnPublisher(uint256 indexed publisherId, uint256 amount);
     event WithdrawnReferrer(uint256 indexed referrerId, uint256 amount);
@@ -48,7 +50,7 @@ contract TyrionBroker is OwnableUpgradeable {
         tyrionToken.transfer(msg.sender, balance);
     }
 
-    function depositTokens(uint256 advertiserId, uint256 amount) external {
+    function depositTokens(uint256 advertiserId, uint256 amount) public {
         require(tyrionToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         uint256 advertiserAmount = (amount * advertiserPercentage) / percentDivisor;
@@ -72,7 +74,9 @@ contract TyrionBroker is OwnableUpgradeable {
     }
 
     // This function can be called from the server-side to credit publishers
-    function creditPublisher(uint256 advertiserId, uint256 publisherId, uint256 amount) external onlyOwner {
+    function creditPublisher(uint256 advertiserId, uint256 publisherId, uint256 amount) external {
+        require(fundsManager == msg.sender, "Only funds manager can credit publishers");
+
         // Ensure the server's address is authorized
         Advertiser memory advertiser = registry.getAdvertiserById(advertiserId);
 
@@ -126,5 +130,9 @@ contract TyrionBroker is OwnableUpgradeable {
         burnPercentage = _burnPercentage;
         referrerDepositPercentage = _referrerDepositPercentage;
         publisherReferrerPercentage = _publisherReferrerPercentage;
+    }
+
+    function setFundsManager(address _fundsManager) external onlyOwner {
+        fundsManager = _fundsManager;
     }
 }
