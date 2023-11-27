@@ -6,7 +6,6 @@
 // global scope, and execute the script.
 const hre = require("hardhat");
 const { upgradeMain, deployMain } = require('./util/tyrion-functions.js');
-const { TYRION_MAINNET, TYRION_SEPOLIA } = require('./util/const.js');
 const {ADDRESSES} = require("./util/const");
 
 

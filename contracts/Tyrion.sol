@@ -85,6 +85,10 @@ contract Tyrion is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     uint256 public uniswapDeployBlock;
     bool public isBlacklistActive;
 
+    // ########## TODOOOOO #######
+    // ADD tax manager that can change tax percent
+    // Fix stuff from the audit
+
     constructor(address uniswapAddress)
         ERC20("Tyrion.finance", "TYRION")
         ERC20Permit("Tyrion.finance")

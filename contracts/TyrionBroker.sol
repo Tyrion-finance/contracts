@@ -20,15 +20,15 @@ contract TyrionBroker is OwnableUpgradeable {
     uint256 public publisherReferrerPercentage;
     uint256 public percentDivisor;
 
-    address public treasuryWallet;
+    address public treasuryWallet; // team treasury, where team commission goes
     Tyrion public tyrionToken;
     TyrionRegistry public registry;
 
-    address public fundsManager;
+    address public fundsManager; // server-side address that can credit publishers
 
     event Deposited(uint256 indexed advertiserId, uint256 amount);
     event WithdrawnPublisher(uint256 indexed publisherId, uint256 amount);
-    event WithdrawnReferrer(uint256 indexed referrerId, uint256 amount);
+    event WithdrawnReferrer(address indexed referrerId, uint256 amount);
 
     function initialize(address payable _tyrionTokenAddress, address _registryAddress) public initializer {
         advertiserPercentage = 700;
@@ -64,7 +64,7 @@ contract TyrionBroker is OwnableUpgradeable {
         tyrionToken.transfer(treasuryWallet, treasuryAmount);
 
         Advertiser memory advertiser = registry.getAdvertiserById(advertiserId);
-        if (advertiser.referrer != 0) {
+        if (advertiser.referrer != address(0)) {
             registry.modifyReferrerBalance(advertiser.referrer, int256(referrerAmount));
         }
 
@@ -95,7 +95,7 @@ contract TyrionBroker is OwnableUpgradeable {
 
         tyrionToken.transfer(publisher.wallet, amount);
         // Assuming each referrer has a unique ID and is mapped to their ID
-        if (publisher.referrer != 0) {
+        if (publisher.referrer != address(0)) {
             int256 referrerAmount = int256((amount * publisherReferrerPercentage) / percentDivisor);
             registry.modifyReferrerBalance(publisher.referrer, referrerAmount);
         }
@@ -103,7 +103,7 @@ contract TyrionBroker is OwnableUpgradeable {
         emit WithdrawnPublisher(publisherId, amount);
     }
 
-    function referrerWithdraw(uint256 referrerId) external {
+    function referrerWithdraw(address referrerId) external {
         Referrer memory referrer = registry.getReferrerById(referrerId);
         require(referrer.wallet == msg.sender, "Unauthorized");
         require(referrer.balance > 0, "No balance to withdraw");
