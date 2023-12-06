@@ -74,7 +74,7 @@ contract TyrionBroker is OwnableUpgradeable {
     }
 
     // This function can be called from the server-side to credit publishers
-    function creditPublisher(uint256 advertiserId, uint256 publisherId, uint256 amount) external {
+    function creditPublisher(uint256 advertiserId, uint256 publisherId, uint256 amount) public {
         require(fundsManager == msg.sender, "Only funds manager can credit publishers");
 
         // Ensure the server's address is authorized
@@ -84,6 +84,14 @@ contract TyrionBroker is OwnableUpgradeable {
 
         registry.modifyAdvertiserBalance(advertiserId, -int256(amount));
         registry.modifyPublisherBalance(publisherId, int256(amount));
+    }
+
+    function creditMultiplePublishers(uint256 advertiserId, uint256[] memory publisherIds, uint256[] memory amounts) public {
+        require(publisherIds.length == amounts.length, "Publisher IDs and amounts length mismatch");
+
+        for (uint i = 0; i < publisherIds.length; i++) {
+            creditPublisher(advertiserId, publisherIds[i], amounts[i]);
+        }
     }
 
     function publisherWithdraw(uint256 publisherId, uint256 amount) external {

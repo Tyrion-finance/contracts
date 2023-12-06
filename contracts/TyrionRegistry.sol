@@ -17,11 +17,22 @@ struct Advertiser {
     address referrer;
 }
 
+struct Stake {
+    uint256 amount;
+    uint256 timestamp;
+}
+
+struct StakingPool {
+    uint256 balance;
+    mapping(address => Stake) stakes;
+}
+
 struct Publisher {
     uint256 id;
     address wallet;
     uint256 balance;
     address referrer;
+//    StakingPool stakingPool;
 }
 
 struct Referrer {
