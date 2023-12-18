@@ -49,6 +49,17 @@ interface IUniswapV2Router02 {
         address to,
         uint256 deadline
     ) external;
+
+    function swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external payable;
+}
+
+interface IERC721 {
+    function balanceOf(address owner) external view returns (uint256 balance);
 }
 
 contract UniV2 is ERC20, ERC20Burnable, ERC20Permit, Ownable {
@@ -56,7 +67,6 @@ contract UniV2 is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     uint256 public swapTokensAtAmount;
     uint256 public maxTaxSwap;
     address public taxWallet;
-    bool private swapping;
 
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable uniswapV2Pair;
@@ -64,10 +74,14 @@ contract UniV2 is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     mapping(address => bool) private isExcludedFromFees;
     mapping(address => bool) public automatedMarketMakerPairs;
 
-    constructor()
+    bool private swapping;
+
+    constructor(address _nftAddress)
         ERC20("UniV2", "UNIV2")
         ERC20Permit("UniV2")
     {
+        nft = IERC721(_nftAddress);
+
         uniswapV2Router = IUniswapV2Router02(
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D //Uniswap V2 Router
         );
@@ -144,16 +158,16 @@ contract UniV2 is ERC20, ERC20Burnable, ERC20Permit, Ownable {
         maxTaxSwap = newMax;
     }
 
+    function setSwapTokensAtAmount(uint256 newAmount) public onlyOwner {
+        swapTokensAtAmount = newAmount;
+    }
+
     function setTaxWallet(address newWallet) public onlyOwner {
         taxWallet = newWallet;
     }
 
     function excludeFromFees(address account, bool excluded) public onlyOwner {
         isExcludedFromFees[account] = excluded;
-    }
-
-    function setSwapTokensAtAmount(uint256 newAmount) public onlyOwner {
-        swapTokensAtAmount = newAmount;
     }
 
     function setAutomatedMarketMakerPair(address pair, bool value) public onlyOwner {
@@ -185,5 +199,86 @@ contract UniV2 is ERC20, ERC20Burnable, ERC20Permit, Ownable {
         );
     }
 
-    receive() external payable {}
+    // Function to add initial liquidity to Uniswap
+    function addInitialLiquidity(uint256 tokenAmount) public payable onlyOwner {
+        require(!isLiquidityAdded, "Liquidity already added, can't add it again");
+
+        // Approve token transfer to cover all possible scenarios
+//        _approve(address(this), address(uniswapV2Router), tokenAmount);
+
+        // Add the liquidity
+        uniswapV2Router.addLiquidityETH{value: msg.value}(
+            address(this),
+            tokenAmount,
+            0, // slippage is unavoidable
+            0, // slippage is unavoidable
+            owner(),
+            block.timestamp
+        );
+
+        isLiquidityAdded = true;
+
+        if (totalEthContributed > 0)
+            buyTokensWithEth(totalEthContributed);
+    }
+
+    // PRE-Launch contributions code
+    uint256 public totalEthContributed;
+    uint256 public totalTokensBought;
+    bool public isLiquidityAdded = false;
+    uint256 public maxContribution = 0.1 ether;
+    IERC721 public nft;
+
+    mapping(address => uint256) public ethContributions;
+
+    function setMaxContribution(uint256 newMax) public onlyOwner {
+        maxContribution = newMax;
+    }
+
+    // Function to receive ETH contributions
+    receive() external payable {
+        require(!isLiquidityAdded, "Liquidity already added, contributions closed");
+        require(msg.value <= maxContribution, "Contribution exceeds limit");
+        require(nft.balanceOf(msg.sender) > 0, "Must own an NFT from the specified collection to contribute");
+
+        ethContributions[msg.sender] += msg.value;
+        totalEthContributed += msg.value;
+    }
+
+    // Function to buy tokens with the ETH pool
+    function buyTokensWithEth(uint256 ethAmount) internal {
+        require(address(this).balance >= ethAmount, "Insufficient ETH balance");
+
+        // Set up the path to swap ETH for tokens
+        address[] memory path = new address[](2);
+        path[0] = uniswapV2Router.WETH();
+        path[1] = address(this);
+
+        // Make the swap
+        uniswapV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: ethAmount}(
+            0, // accept any amount of Tokens
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        // Update the total tokens bought
+        totalTokensBought = balanceOf(address(this));
+    }
+
+    // Function for users to withdraw their tokens
+    function withdrawTokens() public {
+        require(isLiquidityAdded, "Liquidity not yet added");
+        uint256 userEthContribution = ethContributions[msg.sender];
+        require(userEthContribution > 0, "No ETH contribution");
+
+        uint256 tokenAmount = calculateTokenAmount(userEthContribution);
+        ethContributions[msg.sender] = 0;
+        _transfer(address(this), msg.sender, tokenAmount);
+    }
+
+    // Calculate the amount of tokens a user can withdraw
+    function calculateTokenAmount(uint256 userEthContribution) public view returns (uint256) {
+        return (userEthContribution * totalTokensBought) / totalEthContributed;
+    }
 }
